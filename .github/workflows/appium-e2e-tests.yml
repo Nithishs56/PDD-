@@ -14,29 +14,29 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node.js 20 (required for Appium 3 ESM compatibility)
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
           cache: 'npm'
 
-      - name: Install Dependencies
+      - name: Install App Dependencies
         run: npm ci
 
-      - name: Install Appium 3.x and UiAutomator2 Driver
+      - name: Install Appium 2.x (stable, CJS-compatible) and UiAutomator2 Driver
         run: |
-          npm install -g appium@3
+          npm install -g appium@2
           appium driver install uiautomator2
-          appium &
-          sleep 10
+          appium server --log-level error &
+          sleep 8
 
-      - name: Setup Java (required for Android build)
+      - name: Setup Java 17 (required for Android Gradle build)
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Build Android Debug APK (Expo)
+      - name: Build Android Debug APK (Expo prebuild)
         run: |
           npx expo prebuild --platform android --no-install
           cd android && ./gradlew assembleDebug
@@ -49,7 +49,7 @@ jobs:
           target: default
           arch: x86_64
           profile: pixel_5
-          script: npm run test:android --if-present || true
+          script: PLATFORM=android npx wdio run appium-tests/config/wdio.conf.js || true
         continue-on-error: true
 
       - name: Upload Android Results
@@ -67,30 +67,28 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node.js 20
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
           cache: 'npm'
 
-      - name: Install Dependencies
+      - name: Install App Dependencies
         run: npm ci
 
-      - name: Install Web Dependencies for Expo
+      - name: Install Expo Web Dependencies
         run: npx expo install react-dom react-native-web @expo/metro-runtime
 
       - name: Export Expo Web Build
         run: npx expo export -p web
         continue-on-error: true
 
-      - name: Serve Web Build
+      - name: Serve Web Build and Run Tests
         run: |
-          npx serve dist &
+          npm install -g serve
+          serve dist -p 19006 &
           sleep 5
-        continue-on-error: true
-
-      - name: Run Web Tests
-        run: npm run test:web --if-present || true
+          PLATFORM=web npx wdio run appium-tests/config/wdio.conf.js || true
         continue-on-error: true
 
       - name: Upload Web Results
@@ -110,12 +108,12 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node.js 20
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
 
-      - name: Install Dependencies
+      - name: Install App Dependencies
         run: npm ci
 
       - name: Download All Test Results
@@ -126,18 +124,18 @@ jobs:
         continue-on-error: true
 
       - name: Generate Excel Report
-        run: node appium-tests/utils/generateExcelReport.js || echo "No results to report yet"
+        run: node appium-tests/utils/generateExcelReport.js || echo "No test results found — skipping Excel generation"
 
       - name: Publish Job Summary
         run: |
-          echo "## Appium E2E Test Suite - FleetSync PDD" >> $GITHUB_STEP_SUMMARY
+          echo "## Appium E2E Test Suite — FleetSync PDD" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Platform | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Android  | See android-tests job |" >> $GITHUB_STEP_SUMMARY
-          echo "| Web      | See web-tests job |" >> $GITHUB_STEP_SUMMARY
+          echo "| Android  | See android-tests job above |" >> $GITHUB_STEP_SUMMARY
+          echo "| Web      | See web-tests job above |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Download the Appium-Test-Report artifact below to view the full Excel report." >> $GITHUB_STEP_SUMMARY
+          echo "Download the **Appium-Test-Report** artifact to view the full Excel report." >> $GITHUB_STEP_SUMMARY
 
       - name: Upload Excel Report
         uses: actions/upload-artifact@v4
