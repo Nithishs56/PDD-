@@ -1,0 +1,14 @@
+{
+  "name": "selenium-tests",
+  "version": "1.0.0",
+  "description": "Web E2E tests using Selenium",
+  "scripts": {
+    "test": "mocha tests/**/*.js",
+    "report": "node utils/generateSeleniumReport.js"
+  },
+  "dependencies": {
+    "selenium-webdriver": "^4.20.0",
+    "mocha": "^10.4.0",
+    "exceljs": "^4.4.0"
+  }
+}

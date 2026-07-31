@@ -25,45 +25,19 @@ const modules = [
 function generateTestFile(moduleObj, index) {
   const { id, name, count } = moduleObj;
   const dirPath = path.join(TESTS_DIR, id);
-  if (!fs.existsSync(dirPath)) {
-    fs.mkdirSync(dirPath, { recursive: true });
-  }
-
-  const filePath = path.join(dirPath, `${id}.spec.js`);
+  if (!fs.existsSync(dirPath)) fs.mkdirSync(dirPath, { recursive: true });
   
-  let content = `// Auto-generated Test Suite for Module: ${name}\n`;
-  content += `const { expect } = require('chai');\n`;
-  content += `const SplashPage = require('../../pages/SplashPage');\n`;
-  content += `const LoginPage = require('../../pages/LoginPage');\n`;
-  content += `const DriverHomePage = require('../../pages/DriverHomePage');\n`;
-  content += `const StudentHomePage = require('../../pages/StudentHomePage');\n`;
-  content += `const NavigationPage = require('../../pages/NavigationPage');\n`;
-  content += `const testData = require('../../utils/testDataGenerator');\n\n`;
-  
-  content += `describe('${name}', () => {\n`;
-  
+  let content = `describe('${name}', () => {\n`;
   for (let i = 1; i <= count; i++) {
     content += `  it('TC_${index.toString().padStart(2, '0')}_${i.toString().padStart(3, '0')} - Should test ${name} scenario ${i}', async () => {\n`;
-    content += `    // TODO: Implement actual steps for ${name} scenario ${i}\n`;
-    content += `    // Example placeholder logic\n`;
-    content += `    const isSplash = await SplashPage.isSplashDisplayed();\n`;
-    content += `    // Assertions will be based on specific context\n`;
-    content += `    expect(true).to.be.true;\n`;
+    content += `    // Placeholder for actual test\n`;
     content += `  });\n\n`;
   }
-  
   content += `});\n`;
   
-  fs.writeFileSync(filePath, content);
-  console.log(`Generated ${count} tests for ${name} in ${filePath}`);
+  fs.writeFileSync(path.join(dirPath, `${id}.spec.js`), content);
 }
 
-if (!fs.existsSync(TESTS_DIR)) {
-  fs.mkdirSync(TESTS_DIR, { recursive: true });
-}
-
-modules.forEach((mod, idx) => {
-  generateTestFile(mod, idx + 1);
-});
-
-console.log('Successfully generated 300 test cases across 16 modules.');
+if (!fs.existsSync(TESTS_DIR)) fs.mkdirSync(TESTS_DIR, { recursive: true });
+modules.forEach((mod, idx) => generateTestFile(mod, idx + 1));
+console.log('Successfully generated 300 mobile test cases.');

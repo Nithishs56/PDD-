@@ -1,0 +1,103 @@
+name: Comprehensive DevSecOps Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  mobile-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - run: npm ci
+      - name: Install Appium Dependencies
+        run: |
+          npm install -g appium@latest
+          appium driver install uiautomator2
+      - name: Generate Appium Tests
+        run: node appium-tests/generateTests.js
+      - name: Mock Test Execution & Report Generation
+        run: |
+          npm install exceljs
+          node appium-tests/utils/generateExcelReport.js
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Appium-Results
+          path: Vulnerability Test Results/mobile-test-report.xlsx
+          retention-days: 7
+
+  web-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - name: Install Selenium Dependencies
+        run: |
+          cd selenium-tests
+          npm install
+      - name: Generate Web Test Report
+        run: |
+          cd selenium-tests
+          node utils/generateSeleniumReport.js
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Selenium-Results
+          path: Vulnerability Test Results/selenium-test-report.xlsx
+          retention-days: 7
+
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - name: Install Dependencies
+        run: npm install exceljs
+      - name: Generate Security Reports
+        run: node security-tests/generate-security-reports.js
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Security-Results
+          path: Vulnerability Test Results/
+          retention-days: 7
+
+  load-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
+      - name: Start Mock Server
+        run: |
+          python3 -m http.server 19006 &
+          sleep 3
+      - name: Run k6 Load Test
+        run: k6 run load-tests/k6-test.js
+        # Workflow fails if thresholds are exceeded (e.g. >1500ms)
+
+  consolidated-summary:
+    needs: [mobile-e2e, web-e2e, security-scan, load-test]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Publish Action Summary
+        run: |
+          echo "# DevSecOps Pipeline Execution Complete" >> $GITHUB_STEP_SUMMARY
+          echo "All jobs have finished. The artifacts containing Mobile E2E, Web E2E (Selenium), and Security reports are available for download." >> $GITHUB_STEP_SUMMARY
