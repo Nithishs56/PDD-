@@ -1,0 +1,11 @@
+Starting project at C:\Users\Nithi\OneDrive\Desktop\app
+Starting Metro Bundler
+Tunnel connected.
+Tunnel ready.
+The following packages should be updated for best compatibility with the installed expo version:
+  react-native-gesture-handler@2.31.2 - expected version: ~2.28.0
+  react-native-safe-area-context@5.7.0 - expected version: ~5.6.0
+  react-native-screens@4.25.0 - expected version: ~4.16.0
+Your project may not work correctly until you install the expected versions of the packages.
+Waiting on http://localhost:8081
+Logs for your project will appear below.
