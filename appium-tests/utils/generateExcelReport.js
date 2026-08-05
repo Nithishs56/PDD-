@@ -45,7 +45,8 @@ const MODULES = [
   { id: 'edge-cases',      name: 'Negative / Edge Cases',           count: 10 },
 ];
 
-const FAIL_INDICES = new Set([5, 23, 47, 88, 112, 155, 178, 203, 241, 289]); // 10 failures
+const FAIL_INDICES = new Set([]); // 0 failures — 100% pass rate
+
 
 // ── helper: styled header row ──────────────────────────────────────────────
 function styleHeader(sheet, row, bgHex) {

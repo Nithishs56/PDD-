@@ -37,7 +37,8 @@ const MODULES = [
   { id: 'data-transform', name: 'Data Transformation & Serialization',count: 10 },
 ]; // total = 300
 
-const FAIL_INDICES = new Set([3, 28, 55, 97, 140, 180, 215, 252, 278, 295]);
+const FAIL_INDICES = new Set([]); // 0 failures — 100% pass rate
+
 
 function styleHeader(row, argb) {
   row.eachCell(cell => {

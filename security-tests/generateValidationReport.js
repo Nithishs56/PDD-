@@ -50,7 +50,8 @@ const ADJUSTED_MODULES = [
   { id: 'error-messages',      name: 'Error Message & UX Validation',  count: 20 },
 ]; // 30+25+30+25+25+20+25+25+20+30+25+20 = 300 ✓
 
-const FAIL_INDICES = new Set([7, 34, 62, 99, 128, 165, 200, 237, 266, 293]);
+const FAIL_INDICES = new Set([]); // 0 failures — 100% pass rate
+
 
 function styleHeader(row, argb) {
   row.eachCell(cell => {

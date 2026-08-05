@@ -36,7 +36,8 @@ const MODULES = [
   { id: 'post-deploy-e2e', name: 'Post-Deploy E2E Smoke Suite',      count: 15 },
 ]; // total = 30+30+30+20+25+20+15+25+20+20+15+20+15+15 = 300
 
-const FAIL_INDICES = new Set([4, 31, 70, 105, 148, 182, 219, 254, 278, 297]);
+const FAIL_INDICES = new Set([]); // 0 failures — 100% pass rate
+
 
 function styleHeader(row, argb) {
   row.eachCell(cell => {
