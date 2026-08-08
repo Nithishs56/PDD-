@@ -119,5 +119,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Appium-Test-Report
-          path: Vulnerability Test Results/appium-test-report.xlsx
+          path: Vulnerability Test Results/appium-android-report.xlsx
           retention-days: 14
