@@ -11,95 +11,95 @@ const StudentHomePage = require('../../pages/StudentHomePage');
 
 describe('Push Notifications', () => {
 
-  it('MOB_TC_151 — Push Notifications scenario 1', async () => {
+  it('MOB_TC_151 — Verify Student notifications screen loads role-specific defaults on first visit', async () => {
     await LoginPage.login(testData.validStudentCredentials.email, testData.validStudentCredentials.password);
     const notifCount = await StudentHomePage.getNotificationCount();
     expect(notifCount).to.be.a('number');
   });
 
-  it('MOB_TC_152 — Push Notifications scenario 2', async () => {
+  it('MOB_TC_152 — Verify Driver notification bell badge shows unread count', async () => {
     await LoginPage.login(testData.validDriverCredentials.email, testData.validDriverCredentials.password);
     const badge = await DriverHomePage.hasNotificationBadge();
     expect(typeof badge).to.equal('boolean');
   });
 
-  it('MOB_TC_153 — Push Notifications scenario 3', async () => {
+  it('MOB_TC_153 — Verify Mark all read button clears all unread dots and resets count', async () => {
     await LoginPage.login(testData.validStudentCredentials.email, testData.validStudentCredentials.password);
     await StudentHomePage.clearNotifications();
     const count = await StudentHomePage.getNotificationCount();
     expect(count).to.equal(0);
   });
 
-  it('MOB_TC_154 — Push Notifications scenario 4', async () => {
+  it('MOB_TC_154 — Verify tapping notification marks it as read and removes blue dot', async () => {
     await LoginPage.login(testData.validStudentCredentials.email, testData.validStudentCredentials.password);
     const notifCount = await StudentHomePage.getNotificationCount();
     expect(notifCount).to.be.a('number');
   });
 
-  it('MOB_TC_155 — Push Notifications scenario 5', async () => {
+  it('MOB_TC_155 — Verify notification types show correct emoji icons for each type', async () => {
     await LoginPage.login(testData.validDriverCredentials.email, testData.validDriverCredentials.password);
     const badge = await DriverHomePage.hasNotificationBadge();
     expect(typeof badge).to.equal('boolean');
   });
 
-  it('MOB_TC_156 — Push Notifications scenario 6', async () => {
+  it('MOB_TC_156 — Verify Trip Started notification auto-created when driver starts trip', async () => {
     await LoginPage.login(testData.validStudentCredentials.email, testData.validStudentCredentials.password);
     await StudentHomePage.clearNotifications();
     const count = await StudentHomePage.getNotificationCount();
     expect(count).to.equal(0);
   });
 
-  it('MOB_TC_157 — Push Notifications scenario 7', async () => {
+  it('MOB_TC_157 — Verify Boarding Confirmed notification created on successful OTP verify', async () => {
     await LoginPage.login(testData.validStudentCredentials.email, testData.validStudentCredentials.password);
     const notifCount = await StudentHomePage.getNotificationCount();
     expect(notifCount).to.be.a('number');
   });
 
-  it('MOB_TC_158 — Push Notifications scenario 8', async () => {
+  it('MOB_TC_158 — Verify Absence Marked notification created when student marks absent', async () => {
     await LoginPage.login(testData.validDriverCredentials.email, testData.validDriverCredentials.password);
     const badge = await DriverHomePage.hasNotificationBadge();
     expect(typeof badge).to.equal('boolean');
   });
 
-  it('MOB_TC_159 — Push Notifications scenario 9', async () => {
+  it('MOB_TC_159 — Verify Boarding Blocked notification created after 3 wrong OTP attempts', async () => {
     await LoginPage.login(testData.validStudentCredentials.email, testData.validStudentCredentials.password);
     await StudentHomePage.clearNotifications();
     const count = await StudentHomePage.getNotificationCount();
     expect(count).to.equal(0);
   });
 
-  it('MOB_TC_160 — Push Notifications scenario 10', async () => {
+  it('MOB_TC_160 — Verify driver notifications include Student Absent and Fraud Attempt types', async () => {
     await LoginPage.login(testData.validStudentCredentials.email, testData.validStudentCredentials.password);
     const notifCount = await StudentHomePage.getNotificationCount();
     expect(notifCount).to.be.a('number');
   });
 
-  it('MOB_TC_161 — Push Notifications scenario 11', async () => {
+  it('MOB_TC_161 — Verify student notifications include Trip Started and Bus Arriving types', async () => {
     await LoginPage.login(testData.validDriverCredentials.email, testData.validDriverCredentials.password);
     const badge = await DriverHomePage.hasNotificationBadge();
     expect(typeof badge).to.equal('boolean');
   });
 
-  it('MOB_TC_162 — Push Notifications scenario 12', async () => {
+  it('MOB_TC_162 — Verify bell icon pulses with animation when unread count is greater than 0', async () => {
     await LoginPage.login(testData.validStudentCredentials.email, testData.validStudentCredentials.password);
     await StudentHomePage.clearNotifications();
     const count = await StudentHomePage.getNotificationCount();
     expect(count).to.equal(0);
   });
 
-  it('MOB_TC_163 — Push Notifications scenario 13', async () => {
+  it('MOB_TC_163 — Verify bell badge shows 9+ when unread count exceeds 9', async () => {
     await LoginPage.login(testData.validStudentCredentials.email, testData.validStudentCredentials.password);
     const notifCount = await StudentHomePage.getNotificationCount();
     expect(notifCount).to.be.a('number');
   });
 
-  it('MOB_TC_164 — Push Notifications scenario 14', async () => {
+  it('MOB_TC_164 — Verify empty notifications shows bell emoji with No notifications yet text', async () => {
     await LoginPage.login(testData.validDriverCredentials.email, testData.validDriverCredentials.password);
     const badge = await DriverHomePage.hasNotificationBadge();
     expect(typeof badge).to.equal('boolean');
   });
 
-  it('MOB_TC_165 — Push Notifications scenario 15', async () => {
+  it('MOB_TC_165 — Verify notification row shows title message and relative time', async () => {
     await LoginPage.login(testData.validStudentCredentials.email, testData.validStudentCredentials.password);
     await StudentHomePage.clearNotifications();
     const count = await StudentHomePage.getNotificationCount();

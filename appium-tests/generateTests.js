@@ -10,6 +10,7 @@
 
 const fs   = require('fs');
 const path = require('path');
+const TEST_TITLES = require('./testTitles');
 
 const TESTS_DIR = path.join(__dirname, 'tests');
 if (!fs.existsSync(TESTS_DIR)) fs.mkdirSync(TESTS_DIR, { recursive: true });
@@ -184,7 +185,9 @@ function generateSpecFile(mod, startIdx) {
   for (let i = 1; i <= count; i++) {
     const tcId  = `MOB_TC_${(startIdx + i - 1).toString().padStart(3, '0')}`;
     const body  = makeTestBody(id, tcId, i - 1);
-    content += `\n  it('${tcId} — ${name} scenario ${i}', async () => {\n`;
+    const titles = TEST_TITLES[id] || [];
+    const title  = titles[(i - 1) % titles.length] || `${name} scenario ${i}`;
+    content += `\n  it('${tcId} — ${title}', async () => {\n`;
     content += `    ${body}\n`;
     content += `  });\n`;
   }

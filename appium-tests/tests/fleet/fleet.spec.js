@@ -11,211 +11,211 @@ const StudentHomePage = require('../../pages/StudentHomePage');
 
 describe('Fleet / Vehicle Core Features', () => {
 
-  it('MOB_TC_091 — Fleet / Vehicle Core Features scenario 1', async () => {
+  it('MOB_TC_091 — Verify Driver Home shows assigned route label bus number and departure time', async () => {
     await LoginPage.login(testData.validDriverCredentials.email, testData.validDriverCredentials.password);
     const route = await DriverHomePage.getAssignedRoute();
     expect(route).to.include(testData.validDriverCredentials.route);
   });
 
-  it('MOB_TC_092 — Fleet / Vehicle Core Features scenario 2', async () => {
+  it('MOB_TC_092 — Verify Driver Home shows assigned bus number from user profile data', async () => {
     await LoginPage.login(testData.validDriverCredentials.email, testData.validDriverCredentials.password);
     const bus = await DriverHomePage.getAssignedBus();
     expect(bus).to.equal(testData.validDriverCredentials.bus);
   });
 
-  it('MOB_TC_093 — Fleet / Vehicle Core Features scenario 3', async () => {
+  it('MOB_TC_093 — Verify Student Home shows assigned bus number in Today Bus Info card', async () => {
     await LoginPage.login(testData.validStudentCredentials.email, testData.validStudentCredentials.password);
     const busNo = await StudentHomePage.getAssignedBusNo();
     expect(typeof busNo).to.equal('string');
   });
 
-  it('MOB_TC_094 — Fleet / Vehicle Core Features scenario 4', async () => {
+  it('MOB_TC_094 — Verify Driver Home displays welcome greeting with driver name', async () => {
     await LoginPage.login(testData.validDriverCredentials.email, testData.validDriverCredentials.password);
     const driverName = await DriverHomePage.getDriverName();
     expect(driverName).to.equal(testData.validDriverCredentials.name);
   });
 
-  it('MOB_TC_095 — Fleet / Vehicle Core Features scenario 5', async () => {
+  it('MOB_TC_095 — Verify Student Home shows assigned boarding stop in bus info card', async () => {
     await LoginPage.login(testData.validStudentCredentials.email, testData.validStudentCredentials.password);
     const stop = await StudentHomePage.getAssignedStop();
     expect(stop).to.equal(testData.validStudentCredentials.stop);
   });
 
-  it('MOB_TC_096 — Fleet / Vehicle Core Features scenario 6', async () => {
+  it('MOB_TC_096 — Verify Admin Home displays Total Buses stat card with count', async () => {
     await LoginPage.login(testData.validDriverCredentials.email, testData.validDriverCredentials.password);
     const route = await DriverHomePage.getAssignedRoute();
     expect(route).to.include(testData.validDriverCredentials.route);
   });
 
-  it('MOB_TC_097 — Fleet / Vehicle Core Features scenario 7', async () => {
+  it('MOB_TC_097 — Verify Admin Home displays Boarded Today stat card with count', async () => {
     await LoginPage.login(testData.validDriverCredentials.email, testData.validDriverCredentials.password);
     const bus = await DriverHomePage.getAssignedBus();
     expect(bus).to.equal(testData.validDriverCredentials.bus);
   });
 
-  it('MOB_TC_098 — Fleet / Vehicle Core Features scenario 8', async () => {
+  it('MOB_TC_098 — Verify Admin Home displays Trips Done stat card with count', async () => {
     await LoginPage.login(testData.validStudentCredentials.email, testData.validStudentCredentials.password);
     const busNo = await StudentHomePage.getAssignedBusNo();
     expect(typeof busNo).to.equal('string');
   });
 
-  it('MOB_TC_099 — Fleet / Vehicle Core Features scenario 9', async () => {
+  it('MOB_TC_099 — Verify Admin Home displays Alerts stat card with count', async () => {
     await LoginPage.login(testData.validDriverCredentials.email, testData.validDriverCredentials.password);
     const driverName = await DriverHomePage.getDriverName();
     expect(driverName).to.equal(testData.validDriverCredentials.name);
   });
 
-  it('MOB_TC_100 — Fleet / Vehicle Core Features scenario 10', async () => {
+  it('MOB_TC_100 — Verify Admin Home shows Todays Trips section with route status badges', async () => {
     await LoginPage.login(testData.validStudentCredentials.email, testData.validStudentCredentials.password);
     const stop = await StudentHomePage.getAssignedStop();
     expect(stop).to.equal(testData.validStudentCredentials.stop);
   });
 
-  it('MOB_TC_101 — Fleet / Vehicle Core Features scenario 11', async () => {
+  it('MOB_TC_101 — Verify Admin Home shows Maintenance Alerts with severity badges', async () => {
     await LoginPage.login(testData.validDriverCredentials.email, testData.validDriverCredentials.password);
     const route = await DriverHomePage.getAssignedRoute();
     expect(route).to.include(testData.validDriverCredentials.route);
   });
 
-  it('MOB_TC_102 — Fleet / Vehicle Core Features scenario 12', async () => {
+  it('MOB_TC_102 — Verify Admin Fleet screen lists all buses with number model and status', async () => {
     await LoginPage.login(testData.validDriverCredentials.email, testData.validDriverCredentials.password);
     const bus = await DriverHomePage.getAssignedBus();
     expect(bus).to.equal(testData.validDriverCredentials.bus);
   });
 
-  it('MOB_TC_103 — Fleet / Vehicle Core Features scenario 13', async () => {
+  it('MOB_TC_103 — Verify Admin Fleet bus card shows Active or Maintenance status badge', async () => {
     await LoginPage.login(testData.validStudentCredentials.email, testData.validStudentCredentials.password);
     const busNo = await StudentHomePage.getAssignedBusNo();
     expect(typeof busNo).to.equal('string');
   });
 
-  it('MOB_TC_104 — Fleet / Vehicle Core Features scenario 14', async () => {
+  it('MOB_TC_104 — Verify Admin Fleet empty state shows No vehicles found message', async () => {
     await LoginPage.login(testData.validDriverCredentials.email, testData.validDriverCredentials.password);
     const driverName = await DriverHomePage.getDriverName();
     expect(driverName).to.equal(testData.validDriverCredentials.name);
   });
 
-  it('MOB_TC_105 — Fleet / Vehicle Core Features scenario 15', async () => {
+  it('MOB_TC_105 — Verify Admin Driver screen lists drivers with name phone and bus', async () => {
     await LoginPage.login(testData.validStudentCredentials.email, testData.validStudentCredentials.password);
     const stop = await StudentHomePage.getAssignedStop();
     expect(stop).to.equal(testData.validStudentCredentials.stop);
   });
 
-  it('MOB_TC_106 — Fleet / Vehicle Core Features scenario 16', async () => {
+  it('MOB_TC_106 — Verify Admin Driver card shows Active or Inactive status badge', async () => {
     await LoginPage.login(testData.validDriverCredentials.email, testData.validDriverCredentials.password);
     const route = await DriverHomePage.getAssignedRoute();
     expect(route).to.include(testData.validDriverCredentials.route);
   });
 
-  it('MOB_TC_107 — Fleet / Vehicle Core Features scenario 17', async () => {
+  it('MOB_TC_107 — Verify Admin Driver long press shows Edit Delete Cancel options', async () => {
     await LoginPage.login(testData.validDriverCredentials.email, testData.validDriverCredentials.password);
     const bus = await DriverHomePage.getAssignedBus();
     expect(bus).to.equal(testData.validDriverCredentials.bus);
   });
 
-  it('MOB_TC_108 — Fleet / Vehicle Core Features scenario 18', async () => {
+  it('MOB_TC_108 — Verify Admin Driver empty state shows No drivers found message', async () => {
     await LoginPage.login(testData.validStudentCredentials.email, testData.validStudentCredentials.password);
     const busNo = await StudentHomePage.getAssignedBusNo();
     expect(typeof busNo).to.equal('string');
   });
 
-  it('MOB_TC_109 — Fleet / Vehicle Core Features scenario 19', async () => {
+  it('MOB_TC_109 — Verify Admin Route screen lists routes with stops count and students', async () => {
     await LoginPage.login(testData.validDriverCredentials.email, testData.validDriverCredentials.password);
     const driverName = await DriverHomePage.getDriverName();
     expect(driverName).to.equal(testData.validDriverCredentials.name);
   });
 
-  it('MOB_TC_110 — Fleet / Vehicle Core Features scenario 20', async () => {
+  it('MOB_TC_110 — Verify Admin Route expand shows timeline with stop names and times', async () => {
     await LoginPage.login(testData.validStudentCredentials.email, testData.validStudentCredentials.password);
     const stop = await StudentHomePage.getAssignedStop();
     expect(stop).to.equal(testData.validStudentCredentials.stop);
   });
 
-  it('MOB_TC_111 — Fleet / Vehicle Core Features scenario 21', async () => {
+  it('MOB_TC_111 — Verify Admin Route Edit button navigates to AddRoute with prefilled data', async () => {
     await LoginPage.login(testData.validDriverCredentials.email, testData.validDriverCredentials.password);
     const route = await DriverHomePage.getAssignedRoute();
     expect(route).to.include(testData.validDriverCredentials.route);
   });
 
-  it('MOB_TC_112 — Fleet / Vehicle Core Features scenario 22', async () => {
+  it('MOB_TC_112 — Verify Admin Route Delete button shows confirmation alert', async () => {
     await LoginPage.login(testData.validDriverCredentials.email, testData.validDriverCredentials.password);
     const bus = await DriverHomePage.getAssignedBus();
     expect(bus).to.equal(testData.validDriverCredentials.bus);
   });
 
-  it('MOB_TC_113 — Fleet / Vehicle Core Features scenario 23', async () => {
+  it('MOB_TC_113 — Verify Admin Route Add button navigates to empty AddRoute form', async () => {
     await LoginPage.login(testData.validStudentCredentials.email, testData.validStudentCredentials.password);
     const busNo = await StudentHomePage.getAssignedBusNo();
     expect(typeof busNo).to.equal('string');
   });
 
-  it('MOB_TC_114 — Fleet / Vehicle Core Features scenario 24', async () => {
+  it('MOB_TC_114 — Verify Admin Student screen lists students with name roll and route', async () => {
     await LoginPage.login(testData.validDriverCredentials.email, testData.validDriverCredentials.password);
     const driverName = await DriverHomePage.getDriverName();
     expect(driverName).to.equal(testData.validDriverCredentials.name);
   });
 
-  it('MOB_TC_115 — Fleet / Vehicle Core Features scenario 25', async () => {
+  it('MOB_TC_115 — Verify Admin Student card shows Active or Inactive status badge', async () => {
     await LoginPage.login(testData.validStudentCredentials.email, testData.validStudentCredentials.password);
     const stop = await StudentHomePage.getAssignedStop();
     expect(stop).to.equal(testData.validStudentCredentials.stop);
   });
 
-  it('MOB_TC_116 — Fleet / Vehicle Core Features scenario 26', async () => {
+  it('MOB_TC_116 — Verify Admin Student long press shows Edit Delete Cancel options', async () => {
     await LoginPage.login(testData.validDriverCredentials.email, testData.validDriverCredentials.password);
     const route = await DriverHomePage.getAssignedRoute();
     expect(route).to.include(testData.validDriverCredentials.route);
   });
 
-  it('MOB_TC_117 — Fleet / Vehicle Core Features scenario 27', async () => {
+  it('MOB_TC_117 — Verify Admin Maintenance screen categorizes alerts as Critical Warning', async () => {
     await LoginPage.login(testData.validDriverCredentials.email, testData.validDriverCredentials.password);
     const bus = await DriverHomePage.getAssignedBus();
     expect(bus).to.equal(testData.validDriverCredentials.bus);
   });
 
-  it('MOB_TC_118 — Fleet / Vehicle Core Features scenario 28', async () => {
+  it('MOB_TC_118 — Verify Admin Maintenance Mark Resolved button is present on each card', async () => {
     await LoginPage.login(testData.validStudentCredentials.email, testData.validStudentCredentials.password);
     const busNo = await StudentHomePage.getAssignedBusNo();
     expect(typeof busNo).to.equal('string');
   });
 
-  it('MOB_TC_119 — Fleet / Vehicle Core Features scenario 29', async () => {
+  it('MOB_TC_119 — Verify Admin Maintenance shows expiry date and days remaining', async () => {
     await LoginPage.login(testData.validDriverCredentials.email, testData.validDriverCredentials.password);
     const driverName = await DriverHomePage.getDriverName();
     expect(driverName).to.equal(testData.validDriverCredentials.name);
   });
 
-  it('MOB_TC_120 — Fleet / Vehicle Core Features scenario 30', async () => {
+  it('MOB_TC_120 — Verify Admin Trip Monitor shows active trips with Live badge', async () => {
     await LoginPage.login(testData.validStudentCredentials.email, testData.validStudentCredentials.password);
     const stop = await StudentHomePage.getAssignedStop();
     expect(stop).to.equal(testData.validStudentCredentials.stop);
   });
 
-  it('MOB_TC_121 — Fleet / Vehicle Core Features scenario 31', async () => {
+  it('MOB_TC_121 — Verify Admin Trip Monitor shows bus students boarded and next stop', async () => {
     await LoginPage.login(testData.validDriverCredentials.email, testData.validDriverCredentials.password);
     const route = await DriverHomePage.getAssignedRoute();
     expect(route).to.include(testData.validDriverCredentials.route);
   });
 
-  it('MOB_TC_122 — Fleet / Vehicle Core Features scenario 32', async () => {
+  it('MOB_TC_122 — Verify Admin Trip Monitor View Map button opens live map view', async () => {
     await LoginPage.login(testData.validDriverCredentials.email, testData.validDriverCredentials.password);
     const bus = await DriverHomePage.getAssignedBus();
     expect(bus).to.equal(testData.validDriverCredentials.bus);
   });
 
-  it('MOB_TC_123 — Fleet / Vehicle Core Features scenario 33', async () => {
+  it('MOB_TC_123 — Verify Admin Analytics Weekly Boarding Trend bar chart renders data', async () => {
     await LoginPage.login(testData.validStudentCredentials.email, testData.validStudentCredentials.password);
     const busNo = await StudentHomePage.getAssignedBusNo();
     expect(typeof busNo).to.equal('string');
   });
 
-  it('MOB_TC_124 — Fleet / Vehicle Core Features scenario 34', async () => {
+  it('MOB_TC_124 — Verify Admin Analytics Route Utilization progress bars show percentages', async () => {
     await LoginPage.login(testData.validDriverCredentials.email, testData.validDriverCredentials.password);
     const driverName = await DriverHomePage.getDriverName();
     expect(driverName).to.equal(testData.validDriverCredentials.name);
   });
 
-  it('MOB_TC_125 — Fleet / Vehicle Core Features scenario 35', async () => {
+  it('MOB_TC_125 — Verify Admin Analytics Fraud Attempt Log shows blocked attempts', async () => {
     await LoginPage.login(testData.validStudentCredentials.email, testData.validStudentCredentials.password);
     const stop = await StudentHomePage.getAssignedStop();
     expect(stop).to.equal(testData.validStudentCredentials.stop);

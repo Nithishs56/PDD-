@@ -9,7 +9,7 @@ const testData      = require('../../utils/testDataGenerator');
 
 describe('Security & Data Protection', () => {
 
-  it('MOB_TC_281 — Security & Data Protection scenario 1', async () => {
+  it('MOB_TC_281 — Verify SQL injection in email field does not crash the app', async () => {
     // SQL injection in email field should not crash app
     await LoginPage.enterEmail(testData.invalidCredentials.sqlInjection);
     await LoginPage.tapLogin();
@@ -17,7 +17,7 @@ describe('Security & Data Protection', () => {
     expect(err).to.be.true; // app should handle gracefully
   });
 
-  it('MOB_TC_282 — Security & Data Protection scenario 2', async () => {
+  it('MOB_TC_282 — Verify XSS payload in email field does not execute script', async () => {
     // XSS payload in email field
     await LoginPage.enterEmail(testData.invalidCredentials.xssPayload);
     await LoginPage.tapLogin();
@@ -25,7 +25,7 @@ describe('Security & Data Protection', () => {
     expect(err).to.be.true;
   });
 
-  it('MOB_TC_283 — Security & Data Protection scenario 3', async () => {
+  it('MOB_TC_283 — Verify password field uses secureTextEntry to mask input', async () => {
     // SQL injection in email field should not crash app
     await LoginPage.enterEmail(testData.invalidCredentials.sqlInjection);
     await LoginPage.tapLogin();
@@ -33,7 +33,7 @@ describe('Security & Data Protection', () => {
     expect(err).to.be.true; // app should handle gracefully
   });
 
-  it('MOB_TC_284 — Security & Data Protection scenario 4', async () => {
+  it('MOB_TC_284 — Verify Firebase auth tokens are not exposed in console logs', async () => {
     // XSS payload in email field
     await LoginPage.enterEmail(testData.invalidCredentials.xssPayload);
     await LoginPage.tapLogin();
@@ -41,7 +41,7 @@ describe('Security & Data Protection', () => {
     expect(err).to.be.true;
   });
 
-  it('MOB_TC_285 — Security & Data Protection scenario 5', async () => {
+  it('MOB_TC_285 — Verify Firestore security rules prevent unauthorized read/write', async () => {
     // SQL injection in email field should not crash app
     await LoginPage.enterEmail(testData.invalidCredentials.sqlInjection);
     await LoginPage.tapLogin();
@@ -49,7 +49,7 @@ describe('Security & Data Protection', () => {
     expect(err).to.be.true; // app should handle gracefully
   });
 
-  it('MOB_TC_286 — Security & Data Protection scenario 6', async () => {
+  it('MOB_TC_286 — Verify OTP is generated server-side and not predictable client-side', async () => {
     // XSS payload in email field
     await LoginPage.enterEmail(testData.invalidCredentials.xssPayload);
     await LoginPage.tapLogin();
@@ -57,7 +57,7 @@ describe('Security & Data Protection', () => {
     expect(err).to.be.true;
   });
 
-  it('MOB_TC_287 — Security & Data Protection scenario 7', async () => {
+  it('MOB_TC_287 — Verify 3 wrong OTP attempts blocks student from further tries', async () => {
     // SQL injection in email field should not crash app
     await LoginPage.enterEmail(testData.invalidCredentials.sqlInjection);
     await LoginPage.tapLogin();
@@ -65,7 +65,7 @@ describe('Security & Data Protection', () => {
     expect(err).to.be.true; // app should handle gracefully
   });
 
-  it('MOB_TC_288 — Security & Data Protection scenario 8', async () => {
+  it('MOB_TC_288 — Verify RTDB location data requires authenticated user', async () => {
     // XSS payload in email field
     await LoginPage.enterEmail(testData.invalidCredentials.xssPayload);
     await LoginPage.tapLogin();
@@ -73,7 +73,7 @@ describe('Security & Data Protection', () => {
     expect(err).to.be.true;
   });
 
-  it('MOB_TC_289 — Security & Data Protection scenario 9', async () => {
+  it('MOB_TC_289 — Verify logout clears all sensitive data from app state', async () => {
     // SQL injection in email field should not crash app
     await LoginPage.enterEmail(testData.invalidCredentials.sqlInjection);
     await LoginPage.tapLogin();
@@ -81,7 +81,7 @@ describe('Security & Data Protection', () => {
     expect(err).to.be.true; // app should handle gracefully
   });
 
-  it('MOB_TC_290 — Security & Data Protection scenario 10', async () => {
+  it('MOB_TC_290 — Verify admin role cannot access mobile app driver or student screens', async () => {
     // XSS payload in email field
     await LoginPage.enterEmail(testData.invalidCredentials.xssPayload);
     await LoginPage.tapLogin();
