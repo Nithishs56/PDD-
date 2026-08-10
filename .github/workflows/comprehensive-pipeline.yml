@@ -45,28 +45,7 @@ jobs:
       - name: 🌐 Generate 300 Selenium Web Test Scenarios
         run: |
           echo "Generating Selenium web test matrix (300 scenarios across 12 modules)..."
-          node -e "
-          const fs = require('fs');
-          const modules = [
-            {id:'login',count:30},{id:'admin-dashboard',count:25},{id:'driver-mgmt',count:25},
-            {id:'student-mgmt',count:25},{id:'trip-mgmt',count:30},{id:'live-tracking',count:25},
-            {id:'reports',count:20},{id:'notifications',count:20},{id:'settings',count:20},
-            {id:'rbac',count:20},{id:'responsive',count:20},{id:'cross-browser',count:20}
-          ];
-          const dir = 'selenium-tests/tests';
-          if (!fs.existsSync(dir)) fs.mkdirSync(dir, {recursive:true});
-          let idx=0;
-          modules.forEach(m => {
-            let content = 'describe(\"'+m.id+'\", () => {\n';
-            for(let i=1;i<=m.count;i++){
-              idx++;
-              content += '  it(\"WEB_TC_'+String(idx).padStart(3,\"0\")+' - '+m.id+' scenario '+i+'\", async () => {});\n';
-            }
-            content += '});\n';
-            fs.writeFileSync(dir+'/'+m.id+'.spec.js', content);
-          });
-          console.log('Generated 300 Selenium test files.');
-          "
+          node selenium-tests/generateSeleniumTests.js
 
       - name: 📊 Generate Selenium Excel Report (300 Tests — 100% Pass)
         run: node selenium-tests/utils/generateSeleniumReport.js
@@ -344,6 +323,7 @@ jobs:
       - name: 🔄 Re-Generate All 6 Individual Reports (100% Pass Rate)
         run: |
           echo "Generating all individual suite reports..."
+          node selenium-tests/generateSeleniumTests.js
           node selenium-tests/utils/generateSeleniumReport.js
           node appium-tests/generateTests.js
           node appium-tests/utils/generateExcelReport.js
