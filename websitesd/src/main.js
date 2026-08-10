@@ -1,6 +1,9 @@
 import { auth, db, rtdb } from './firebase.js';
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, updateDoc, collection, query, where, onSnapshot, serverTimestamp, addDoc } from 'firebase/firestore';
+import { 
+  doc, getDoc, updateDoc, collection, query, where, 
+  onSnapshot, serverTimestamp, addDoc, increment, arrayUnion 
+} from 'firebase/firestore';
 import { ref, onValue, off } from 'firebase/database';
 import { routes as fallbackRoutes, routeStudents as fallbackRouteStudents, driverAccounts, studentAccounts } from './dummyData.js';
 
@@ -8,7 +11,6 @@ const appEl = document.getElementById('app');
 let currentUserState = null;
 let activeUnsubscribers = [];
 
-// Cleanup existing subscriptions when navigating views
 function cleanupSubscriptions() {
   activeUnsubscribers.forEach(unsub => {
     if (typeof unsub === 'function') unsub();
@@ -16,7 +18,6 @@ function cleanupSubscriptions() {
   activeUnsubscribers = [];
 }
 
-// Initialize app session & auth state listener
 function initApp() {
   onAuthStateChanged(auth, async (user) => {
     if (user) {
@@ -29,7 +30,7 @@ function initApp() {
           return;
         }
       } catch (err) {
-        console.warn('Firestore user doc fetch error, checking local session:', err);
+        console.warn('Firestore user doc fetch error:', err);
       }
     }
     
@@ -69,7 +70,7 @@ function renderLogin(errorMessage = '') {
           <span>ℹ️</span>
           <div>
             <strong>Institution Credential Login</strong><br />
-            Accounts are provisioned in Firestore by your institution admin. Enter your email and password to log in.
+            Accounts are provisioned in Firestore by your institution admin. Sign in with your assigned email.
           </div>
         </div>
 
@@ -122,7 +123,6 @@ function renderLogin(errorMessage = '') {
     errEl.style.display = 'none';
 
     try {
-      // 1. Try Firebase Live Auth & Firestore lookup
       const userCred = await signInWithEmailAndPassword(auth, email, password);
       const userDoc = await getDoc(doc(db, 'users', userCred.user.uid));
       
@@ -132,10 +132,9 @@ function renderLogin(errorMessage = '') {
         return;
       }
     } catch (authErr) {
-      console.log('Firebase live auth attempt:', authErr.message);
+      console.log('Firebase auth fallback check:', authErr.message);
     }
 
-    // 2. Fallback check for offline/demo credentials if live lookup didn't find doc
     const driverMatch = driverAccounts.find(d => d.email.toLowerCase() === email.toLowerCase());
     if (driverMatch && (password === driverMatch.password || password === 'driver123')) {
       currentUserState = driverMatch;
@@ -169,7 +168,7 @@ function renderLogin(errorMessage = '') {
   });
 }
 
-// ── 2. DRIVER VIEW (REAL-TIME FIRESTORE & RTDB) ──────────────────────────────
+// ── 2. DRIVER VIEW (REAL-TIME FIRESTORE & OTP SYNC) ───────────────────────────
 function renderDriverView(user) {
   cleanupSubscriptions();
   const assignedRouteName = user.route || user.assignedRoute || 'Route 1';
@@ -177,7 +176,6 @@ function renderDriverView(user) {
   const busNumber = user.bus || user.assignedBus || assignedRoute.bus || 'TN01AB1234';
   const instId = user.institutionId || 'cit';
 
-  // Local reactive states
   let activeTrip = null;
   let realTimeStudents = fallbackRouteStudents[assignedRouteName] || fallbackRouteStudents['Route 1'];
   let liveLocationData = null;
@@ -200,7 +198,7 @@ function renderDriverView(user) {
     <div class="dashboard-container animate-fade">
       <div class="dashboard-header">
         <h2>Driver Console</h2>
-        <p>Real-time Firestore & Realtime Database sync active for your assigned route.</p>
+        <p>Live sync enabled — Share the trip OTP with students to confirm boarding.</p>
       </div>
 
       <div class="grid-layout">
@@ -230,11 +228,13 @@ function renderDriverView(user) {
           </div>
         </div>
 
-        <!-- Trip Status Card -->
+        <!-- Trip Status & OTP Card -->
         <div class="card">
           <div class="card-header">
-            <span class="card-title">📊 Real-Time Trip Status</span>
-            <span id="driver-otp-display" style="font-size: 0.85rem; color: var(--accent); font-weight: 700;">OTP: --</span>
+            <span class="card-title">🔑 Boarding OTP</span>
+            <span id="driver-otp-display" style="font-size: 1.1rem; color: var(--accent); font-weight: 800; letter-spacing: 2px; background: rgba(124,143,247,0.15); padding: 0.2rem 0.6rem; border-radius: 8px;">
+              OTP: --
+            </span>
           </div>
           <div class="info-list">
             <div class="info-item">
@@ -242,8 +242,8 @@ function renderDriverView(user) {
               <span class="info-value">${assignedRoute.stops[0]?.time || '07:00 AM'}</span>
             </div>
             <div class="info-item">
-              <span class="info-label">Boarded / Total</span>
-              <span id="driver-boarded-count" class="info-value" style="color: var(--success);">
+              <span class="info-label">Boarded Count</span>
+              <span id="driver-boarded-count" class="info-value" style="color: var(--success); font-weight: 700;">
                 0 / ${realTimeStudents.length}
               </span>
             </div>
@@ -280,10 +280,10 @@ function renderDriverView(user) {
           </div>
         </div>
 
-        <!-- Student Boarding Manifest (Live Firestore Sync) -->
+        <!-- Student Boarding Manifest -->
         <div class="card" style="grid-column: span 2;">
           <div class="card-header">
-            <span class="card-title">👥 Live Student Boarding Manifest</span>
+            <span class="card-title">👥 Student Boarding Manifest</span>
             <span id="manifest-count" style="font-size: 0.85rem; color: var(--text-muted);">${realTimeStudents.length} Students</span>
           </div>
           <div style="overflow-x: auto;">
@@ -320,19 +320,30 @@ function renderDriverView(user) {
   const manifestRowsEl = document.getElementById('student-manifest-rows');
   const manifestCountEl = document.getElementById('manifest-count');
 
-  // Helper to render table rows
-  function updateManifestTable(studentsList) {
-    manifestCountEl.innerText = `${studentsList.length} Students`;
+  // Renders manifest table by checking activeTrip.boardedStudents array!
+  function updateManifestTable() {
+    manifestCountEl.innerText = `${realTimeStudents.length} Students`;
     let boardedNum = 0;
 
-    manifestRowsEl.innerHTML = studentsList.map(student => {
-      let isAbsent = student.absentToday === true || student.status === 'absent';
-      let isBoarded = student.isBoarded === true || student.status === 'boarded';
+    const boardedList = activeTrip?.boardedStudents || [];
+
+    manifestRowsEl.innerHTML = realTimeStudents.map(student => {
+      const sId = student.uid || student.id;
+      const sName = student.name;
+
+      // Check if student has entered OTP (id in boardedList array) OR marked isBoarded
+      const isBoarded = boardedList.includes(sId) || 
+                        boardedList.includes(sName) || 
+                        student.isBoarded === true || 
+                        student.status === 'boarded';
+
+      const isAbsent = student.absentToday === true || student.status === 'absent';
+
       if (isBoarded) boardedNum++;
 
-      let statusBadge = `<span class="badge badge-pending">⏳ Pending</span>`;
+      let statusBadge = `<span class="badge badge-pending">⏳ Pending OTP</span>`;
       if (isBoarded) {
-        statusBadge = `<span class="badge badge-boarded">✓ Boarded</span>`;
+        statusBadge = `<span class="badge badge-boarded">✓ Boarded (OTP Confirmed)</span>`;
       } else if (isAbsent) {
         statusBadge = `<span class="badge badge-absent">✕ Absent Today</span>`;
       }
@@ -347,11 +358,10 @@ function renderDriverView(user) {
       `;
     }).join('');
 
-    boardedCountEl.innerText = `${boardedNum} / ${studentsList.length}`;
+    boardedCountEl.innerText = `${boardedNum} / ${realTimeStudents.length}`;
   }
 
-  // Initial table render with fallback
-  updateManifestTable(realTimeStudents);
+  updateManifestTable();
 
   // 1. Live Firestore Listener for Real Students on this route
   if (user.uid) {
@@ -363,12 +373,11 @@ function renderDriverView(user) {
       );
       const unsubStudents = onSnapshot(q, (snapshot) => {
         if (!snapshot.empty) {
-          const liveList = snapshot.docs.map(docSnap => ({
+          realTimeStudents = snapshot.docs.map(docSnap => ({
             uid: docSnap.id,
             ...docSnap.data()
           }));
-          realTimeStudents = liveList;
-          updateManifestTable(realTimeStudents);
+          updateManifestTable();
         }
       }, err => console.log('Firestore student listener error:', err.message));
       activeUnsubscribers.push(unsubStudents);
@@ -376,11 +385,11 @@ function renderDriverView(user) {
       console.warn('Could not bind Firestore student listener:', e);
     }
 
-    // 2. Live Firestore Listener for Active Trip
+    // 2. Live Firestore Listener for Active Trip (Updates OTP & Boarded Students array in real-time)
     try {
       const qTrip = query(
         collection(db, 'trips'),
-        where('driverId', '==', user.uid),
+        where('routeId', '==', assignedRouteName),
         where('active', '==', true)
       );
       const unsubTrip = onSnapshot(qTrip, (snapshot) => {
@@ -404,6 +413,7 @@ function renderDriverView(user) {
           toggleTripBtn.style.color = 'white';
           toggleTripBtn.style.border = 'none';
         }
+        updateManifestTable();
       }, err => console.log('Firestore trip listener error:', err.message));
       activeUnsubscribers.push(unsubTrip);
     } catch (e) {
@@ -434,37 +444,51 @@ function renderDriverView(user) {
     console.warn('Could not bind RTDB location listener:', e);
   }
 
-  // Handle Trip Toggle (Start/End trip in Firestore)
+  // Start / End Trip button listener
   toggleTripBtn.addEventListener('click', async () => {
-    if (!user.uid) {
-      alert('Demo session — trip status simulated.');
-      return;
-    }
-
     try {
       toggleTripBtn.disabled = true;
       if (activeTrip) {
-        // End trip
-        await updateDoc(doc(db, 'trips', activeTrip.id), {
-          active: false,
-          endTime: serverTimestamp()
-        });
+        // End active trip
+        if (user.uid) {
+          await updateDoc(doc(db, 'trips', activeTrip.id), {
+            active: false,
+            endTime: serverTimestamp()
+          });
+        }
+        activeTrip = null;
+        updateManifestTable();
       } else {
-        // Start trip
+        // Generate new random 4-digit OTP
         const newOtp = String(Math.floor(Math.random() * 9000) + 1000);
-        await addDoc(collection(db, 'trips'), {
-          driverId: user.uid,
-          driverName: user.name,
-          routeId: assignedRouteName,
-          vehicleId: busNumber,
-          institutionId: instId,
-          otp: newOtp,
-          otpGeneratedAt: serverTimestamp(),
-          active: true,
-          boardedCount: 0,
-          boardedStudents: [],
-          startTime: serverTimestamp()
-        });
+        if (user.uid) {
+          await addDoc(collection(db, 'trips'), {
+            driverId: user.uid,
+            driverName: user.name,
+            routeId: assignedRouteName,
+            vehicleId: busNumber,
+            institutionId: instId,
+            otp: newOtp,
+            otpGeneratedAt: serverTimestamp(),
+            active: true,
+            boardedCount: 0,
+            boardedStudents: [],
+            startTime: serverTimestamp()
+          });
+        } else {
+          // Demo mode fallback
+          activeTrip = {
+            otp: newOtp,
+            active: true,
+            boardedCount: 0,
+            boardedStudents: []
+          };
+          otpDisplayEl.innerText = `OTP: ${newOtp}`;
+          tripBadgeEl.className = 'status-tag status-live';
+          tripBadgeEl.innerText = 'TRIP ACTIVE (DEMO)';
+          toggleTripBtn.innerText = 'End Active Trip';
+          updateManifestTable();
+        }
       }
     } catch (err) {
       console.error('Trip update error:', err);
@@ -475,7 +499,7 @@ function renderDriverView(user) {
   });
 }
 
-// ── 3. STUDENT VIEW (REAL-TIME FIRESTORE & RTDB) ──────────────────────────────
+// ── 3. STUDENT VIEW (REAL-TIME FIRESTORE & OTP BOARDING) ─────────────────────
 function renderStudentView(user) {
   cleanupSubscriptions();
   const assignedRouteName = user.route || 'Route 1';
@@ -484,7 +508,7 @@ function renderStudentView(user) {
   const instId = user.institutionId || 'cit';
 
   let liveUserDoc = { ...user };
-  let liveBusData = null;
+  let liveTripDoc = null;
 
   appEl.innerHTML = `
     <header class="navbar">
@@ -504,15 +528,15 @@ function renderStudentView(user) {
     <div class="dashboard-container animate-fade">
       <div class="dashboard-header">
         <h2>Student Dashboard</h2>
-        <p>Live Firestore attendance and Realtime Database bus position tracking.</p>
+        <p>Real-time Firestore boarding verification with driver OTP.</p>
       </div>
 
       <div class="grid-layout">
-        <!-- Student Info Card -->
+        <!-- Student Profile & OTP Boarding Card -->
         <div class="card">
           <div class="card-header">
             <span class="card-title">🎓 Student Profile</span>
-            <span id="student-status-badge" class="badge badge-boarded">EXPECTED TODAY</span>
+            <span id="student-status-badge" class="badge badge-pending">PENDING BOARDING</span>
           </div>
           <div class="info-list">
             <div class="info-item">
@@ -533,8 +557,22 @@ function renderStudentView(user) {
             </div>
           </div>
 
+          <!-- Board Bus with OTP Form -->
+          <div style="margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+            <div style="font-size: 0.85rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--accent);">
+              🔑 Enter Driver OTP to Board Bus
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+              <input type="text" id="otp-input" class="input-field" placeholder="4-Digit OTP" maxlength="4" style="font-size: 1.1rem; font-weight: 700; text-align: center; letter-spacing: 2px;" />
+              <button id="btn-submit-otp" class="btn-primary" style="width: auto; padding: 0 1.25rem; white-space: nowrap;">
+                Board Bus
+              </button>
+            </div>
+            <div id="otp-msg" style="font-size: 0.8rem; margin-top: 0.5rem; display: none;"></div>
+          </div>
+
           <div style="margin-top: 1rem;">
-            <button id="btn-toggle-absent" style="width: 100%; padding: 0.65rem 1rem; border-radius: var(--radius-md); font-weight: 600; cursor: pointer; transition: all 0.2s ease;">
+            <button id="btn-toggle-absent" style="width: 100%; padding: 0.6rem 1rem; border-radius: var(--radius-md); font-weight: 600; cursor: pointer; transition: all 0.2s ease;">
               Mark Absent Today
             </button>
           </div>
@@ -552,12 +590,12 @@ function renderStudentView(user) {
               <span class="info-value">${assignedRoute.name} — ${assignedRoute.label}</span>
             </div>
             <div class="info-item">
-              <span class="info-label">Bus Number</span>
-              <span id="student-bus-num" class="info-value">${assignedRoute.bus}</span>
+              <span class="info-label">Active OTP Status</span>
+              <span id="student-active-otp-status" class="info-value" style="color: var(--accent); font-weight: 700;">Checking trip...</span>
             </div>
             <div class="info-item">
-              <span class="info-label">Driver</span>
-              <span id="student-driver-name" class="info-value">${assignedRoute.driver}</span>
+              <span class="info-label">Bus Number</span>
+              <span id="student-bus-num" class="info-value">${assignedRoute.bus}</span>
             </div>
             <div class="info-item">
               <span class="info-label">Estimated Pickup</span>
@@ -569,7 +607,7 @@ function renderStudentView(user) {
         </div>
       </div>
 
-      <!-- Live Route Map / Timeline -->
+      <!-- Route Schedule -->
       <div class="grid-layout" style="margin-top: 1.5rem;">
         <div class="card" style="grid-column: span 2;">
           <div class="card-header">
@@ -601,21 +639,37 @@ function renderStudentView(user) {
   const statusBadgeEl = document.getElementById('student-status-badge');
   const toggleAbsentBtn = document.getElementById('btn-toggle-absent');
   const liveIndicatorEl = document.getElementById('student-live-indicator');
-  const busNumEl = document.getElementById('student-bus-num');
-  const driverNameEl = document.getElementById('student-driver-name');
+  const activeOtpStatusEl = document.getElementById('student-active-otp-status');
+  const otpInput = document.getElementById('otp-input');
+  const btnSubmitOtp = document.getElementById('btn-submit-otp');
+  const otpMsg = document.getElementById('otp-msg');
 
-  // Helper to update student absence button/badge
-  function updateStudentAbsenceUI(isAbsent) {
-    if (isAbsent) {
+  function updateStudentUI() {
+    const sId = user.uid || user.id;
+    const isBoardedInTrip = liveTripDoc?.boardedStudents?.includes(sId) || 
+                            liveTripDoc?.boardedStudents?.includes(user.name);
+    const isAbsent = liveUserDoc.absentToday === true;
+
+    if (isBoardedInTrip || liveUserDoc.isBoarded) {
+      statusBadgeEl.className = 'badge badge-boarded';
+      statusBadgeEl.innerText = '✓ BOARDED BUS';
+      btnSubmitOtp.disabled = true;
+      btnSubmitOtp.innerText = 'Boarded';
+      otpInput.disabled = true;
+    } else if (isAbsent) {
       statusBadgeEl.className = 'badge badge-absent';
       statusBadgeEl.innerText = 'MARKED ABSENT';
+    } else {
+      statusBadgeEl.className = 'badge badge-pending';
+      statusBadgeEl.innerText = 'PENDING BOARDING';
+    }
+
+    if (isAbsent) {
       toggleAbsentBtn.innerText = 'Undo Absence';
       toggleAbsentBtn.style.background = 'rgba(52, 211, 153, 0.15)';
       toggleAbsentBtn.style.color = 'var(--success)';
       toggleAbsentBtn.style.border = '1px solid var(--success)';
     } else {
-      statusBadgeEl.className = 'badge badge-boarded';
-      statusBadgeEl.innerText = 'EXPECTED TODAY';
       toggleAbsentBtn.innerText = 'Mark Absent Today';
       toggleAbsentBtn.style.background = 'rgba(248, 113, 113, 0.15)';
       toggleAbsentBtn.style.color = 'var(--danger)';
@@ -623,53 +677,101 @@ function renderStudentView(user) {
     }
   }
 
-  updateStudentAbsenceUI(user.absentToday === true);
+  updateStudentUI();
 
-  // 1. Live Firestore Listener for Student's own doc (to sync absentToday)
-  if (user.uid) {
-    try {
-      const unsubUser = onSnapshot(doc(db, 'users', user.uid), (snapshot) => {
-        if (snapshot.exists()) {
-          liveUserDoc = { ...snapshot.data(), uid: user.uid };
-          updateStudentAbsenceUI(liveUserDoc.absentToday === true);
-        }
-      });
-      activeUnsubscribers.push(unsubUser);
-    } catch (e) {
-      console.warn('Could not bind user doc listener:', e);
-    }
-  }
-
-  // 2. Live Realtime Database GPS & Bus Location Listener
+  // 1. Live Firestore Listener for Active Trip on Student's route
   try {
-    const locRef = ref(rtdb, `liveLocation/${instId}/${assignedRouteName}`);
-    const unsubRtdb = onValue(locRef, (snapshot) => {
-      if (snapshot.exists()) {
-        liveBusData = snapshot.val();
-        if (liveBusData.isActive) {
-          liveIndicatorEl.className = 'status-tag status-live';
-          liveIndicatorEl.innerText = 'LIVE TRACKING';
-          if (liveBusData.busNumber) busNumEl.innerText = liveBusData.busNumber;
-          if (liveBusData.driverName) driverNameEl.innerText = liveBusData.driverName;
-        } else {
-          liveIndicatorEl.className = 'status-tag status-offline';
-          liveIndicatorEl.innerText = 'BUS STANDBY';
-        }
+    const qTrip = query(
+      collection(db, 'trips'),
+      where('routeId', '==', assignedRouteName),
+      where('active', '==', true)
+    );
+    const unsubTrip = onSnapshot(qTrip, (snapshot) => {
+      if (!snapshot.empty) {
+        liveTripDoc = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
+        liveIndicatorEl.className = 'status-tag status-live';
+        liveIndicatorEl.innerText = 'TRIP ACTIVE';
+        activeOtpStatusEl.innerText = 'Driver Started Trip';
+        activeOtpStatusEl.style.color = 'var(--success)';
       } else {
+        liveTripDoc = null;
         liveIndicatorEl.className = 'status-tag status-offline';
-        liveIndicatorEl.innerText = 'BUS OFFLINE';
+        liveIndicatorEl.innerText = 'BUS STANDBY';
+        activeOtpStatusEl.innerText = 'No Active Trip';
+        activeOtpStatusEl.style.color = 'var(--text-muted)';
       }
+      updateStudentUI();
     });
-    activeUnsubscribers.push(() => off(locRef, 'value', unsubRtdb));
+    activeUnsubscribers.push(unsubTrip);
   } catch (e) {
-    console.warn('Could not bind RTDB location listener:', e);
+    console.warn('Could not bind active trip listener:', e);
   }
+
+  // 2. Submit OTP to board bus
+  btnSubmitOtp.addEventListener('click', async () => {
+    const enteredOtp = otpInput.value.trim();
+    otpMsg.style.display = 'block';
+
+    if (!enteredOtp || enteredOtp.length < 4) {
+      otpMsg.style.color = 'var(--danger)';
+      otpMsg.innerText = 'Please enter a valid 4-digit OTP.';
+      return;
+    }
+
+    if (!liveTripDoc) {
+      otpMsg.style.color = 'var(--danger)';
+      otpMsg.innerText = 'No active trip found for your route. Please wait for driver to start trip.';
+      return;
+    }
+
+    const liveOtp = (liveTripDoc.otp || '').toString().trim();
+    if (enteredOtp !== liveOtp) {
+      otpMsg.style.color = 'var(--danger)';
+      otpMsg.innerText = 'Invalid OTP. Check the OTP shown on your driver screen.';
+      return;
+    }
+
+    // Correct OTP entered! Update Firestore trip doc & boardings collection
+    try {
+      btnSubmitOtp.disabled = true;
+      btnSubmitOtp.innerText = 'Verifying...';
+
+      const studentIdentifier = user.uid || user.name;
+
+      if (liveTripDoc.id) {
+        await updateDoc(doc(db, 'trips', liveTripDoc.id), {
+          boardedCount: increment(1),
+          boardedStudents: arrayUnion(studentIdentifier)
+        });
+
+        await addDoc(collection(db, 'boardings'), {
+          studentId: user.uid || 'demo-uid',
+          studentName: user.name,
+          routeId: assignedRouteName,
+          boardingStop: userStop,
+          boardedAt: serverTimestamp(),
+          tripId: liveTripDoc.id,
+          institutionId: instId
+        });
+      }
+
+      otpMsg.style.color = 'var(--success)';
+      otpMsg.innerText = '✓ Boarding confirmed! Have a safe trip.';
+      updateStudentUI();
+    } catch (err) {
+      console.error('OTP Boarding Error:', err);
+      otpMsg.style.color = 'var(--danger)';
+      otpMsg.innerText = 'Failed to confirm boarding: ' + err.message;
+      btnSubmitOtp.disabled = false;
+      btnSubmitOtp.innerText = 'Board Bus';
+    }
+  });
 
   // Handle Mark / Undo Absent toggle
   toggleAbsentBtn.addEventListener('click', async () => {
     if (!user.uid) {
-      user.absentToday = !user.absentToday;
-      updateStudentAbsenceUI(user.absentToday);
+      liveUserDoc.absentToday = !liveUserDoc.absentToday;
+      updateStudentUI();
       return;
     }
 
@@ -680,6 +782,8 @@ function renderStudentView(user) {
         absentToday: targetState,
         absentMarkedAt: targetState ? serverTimestamp() : null
       });
+      liveUserDoc.absentToday = targetState;
+      updateStudentUI();
     } catch (err) {
       console.error('Absent toggle error:', err);
       alert('Failed to update absence status in Firestore: ' + err.message);
