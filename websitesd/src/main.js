@@ -320,7 +320,6 @@ function renderDriverView(user) {
   const manifestRowsEl = document.getElementById('student-manifest-rows');
   const manifestCountEl = document.getElementById('manifest-count');
 
-  // Renders manifest table by checking activeTrip.boardedStudents array!
   function updateManifestTable() {
     manifestCountEl.innerText = `${realTimeStudents.length} Students`;
     let boardedNum = 0;
@@ -328,12 +327,15 @@ function renderDriverView(user) {
     const boardedList = activeTrip?.boardedStudents || [];
 
     manifestRowsEl.innerHTML = realTimeStudents.map(student => {
-      const sId = student.uid || student.id;
+      const sUid = student.uid;
+      const sId = student.id;
       const sName = student.name;
+      const sEmail = student.email;
 
-      // Check if student has entered OTP (id in boardedList array) OR marked isBoarded
-      const isBoarded = boardedList.includes(sId) || 
-                        boardedList.includes(sName) || 
+      const isBoarded = (sUid && boardedList.includes(sUid)) || 
+                        (sId && boardedList.includes(sId)) || 
+                        (sName && boardedList.includes(sName)) || 
+                        (sEmail && boardedList.includes(sEmail)) || 
                         student.isBoarded === true || 
                         student.status === 'boarded';
 
@@ -385,7 +387,7 @@ function renderDriverView(user) {
       console.warn('Could not bind Firestore student listener:', e);
     }
 
-    // 2. Live Firestore Listener for Active Trip (Updates OTP & Boarded Students array in real-time)
+    // 2. Live Firestore Listener for Active Trip
     try {
       const qTrip = query(
         collection(db, 'trips'),
@@ -449,7 +451,6 @@ function renderDriverView(user) {
     try {
       toggleTripBtn.disabled = true;
       if (activeTrip) {
-        // End active trip
         if (user.uid) {
           await updateDoc(doc(db, 'trips', activeTrip.id), {
             active: false,
@@ -459,7 +460,6 @@ function renderDriverView(user) {
         activeTrip = null;
         updateManifestTable();
       } else {
-        // Generate new random 4-digit OTP
         const newOtp = String(Math.floor(Math.random() * 9000) + 1000);
         if (user.uid) {
           await addDoc(collection(db, 'trips'), {
@@ -476,7 +476,6 @@ function renderDriverView(user) {
             startTime: serverTimestamp()
           });
         } else {
-          // Demo mode fallback
           activeTrip = {
             otp: newOtp,
             active: true,
@@ -499,7 +498,7 @@ function renderDriverView(user) {
   });
 }
 
-// ── 3. STUDENT VIEW (REAL-TIME FIRESTORE & OTP BOARDING) ─────────────────────
+// ── 3. STUDENT VIEW (REAL-TIME TWO-WAY SYNC) ──────────────────────────────────
 function renderStudentView(user) {
   cleanupSubscriptions();
   const assignedRouteName = user.route || 'Route 1';
@@ -531,6 +530,19 @@ function renderStudentView(user) {
         <p>Real-time Firestore boarding verification with driver OTP.</p>
       </div>
 
+      <!-- Prominent Boarded Success Banner -->
+      <div id="student-boarded-banner" style="display: none; background: rgba(52, 211, 153, 0.15); border-left: 4px solid var(--success); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.25rem;">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <span style="font-size: 1.5rem;">✅</span>
+          <div>
+            <div style="font-weight: 700; color: var(--success); font-size: 1rem;">Boarding Confirmed!</div>
+            <div style="font-size: 0.85rem; color: var(--text-main); margin-top: 0.2rem;">
+              You have successfully boarded bus <strong>${assignedRoute.bus}</strong> today. Have a safe journey!
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="grid-layout">
         <!-- Student Profile & OTP Boarding Card -->
         <div class="card">
@@ -558,7 +570,7 @@ function renderStudentView(user) {
           </div>
 
           <!-- Board Bus with OTP Form -->
-          <div style="margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+          <div id="student-otp-section" style="margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
             <div style="font-size: 0.85rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--accent);">
               🔑 Enter Driver OTP to Board Bus
             </div>
@@ -640,28 +652,37 @@ function renderStudentView(user) {
   const toggleAbsentBtn = document.getElementById('btn-toggle-absent');
   const liveIndicatorEl = document.getElementById('student-live-indicator');
   const activeOtpStatusEl = document.getElementById('student-active-otp-status');
+  const otpSectionEl = document.getElementById('student-otp-section');
+  const boardedBannerEl = document.getElementById('student-boarded-banner');
   const otpInput = document.getElementById('otp-input');
   const btnSubmitOtp = document.getElementById('btn-submit-otp');
   const otpMsg = document.getElementById('otp-msg');
 
   function updateStudentUI() {
-    const sId = user.uid || user.id;
-    const isBoardedInTrip = liveTripDoc?.boardedStudents?.includes(sId) || 
-                            liveTripDoc?.boardedStudents?.includes(user.name);
+    const boardedList = liveTripDoc?.boardedStudents || [];
+    const isBoardedInTrip = (user.uid && boardedList.includes(user.uid)) ||
+                            (user.id && boardedList.includes(user.id)) ||
+                            (user.name && boardedList.includes(user.name)) ||
+                            (user.email && boardedList.includes(user.email)) ||
+                            liveUserDoc.isBoarded === true;
+
     const isAbsent = liveUserDoc.absentToday === true;
 
-    if (isBoardedInTrip || liveUserDoc.isBoarded) {
+    if (isBoardedInTrip) {
       statusBadgeEl.className = 'badge badge-boarded';
       statusBadgeEl.innerText = '✓ BOARDED BUS';
-      btnSubmitOtp.disabled = true;
-      btnSubmitOtp.innerText = 'Boarded';
-      otpInput.disabled = true;
+      if (boardedBannerEl) boardedBannerEl.style.display = 'block';
+      if (otpSectionEl) otpSectionEl.style.display = 'none';
     } else if (isAbsent) {
       statusBadgeEl.className = 'badge badge-absent';
       statusBadgeEl.innerText = 'MARKED ABSENT';
+      if (boardedBannerEl) boardedBannerEl.style.display = 'none';
+      if (otpSectionEl) otpSectionEl.style.display = 'none';
     } else {
       statusBadgeEl.className = 'badge badge-pending';
       statusBadgeEl.innerText = 'PENDING BOARDING';
+      if (boardedBannerEl) boardedBannerEl.style.display = 'none';
+      if (otpSectionEl) otpSectionEl.style.display = 'block';
     }
 
     if (isAbsent) {
@@ -679,7 +700,22 @@ function renderStudentView(user) {
 
   updateStudentUI();
 
-  // 1. Live Firestore Listener for Active Trip on Student's route
+  // 1. Live Firestore Listener for Student User Doc
+  if (user.uid) {
+    try {
+      const unsubUserDoc = onSnapshot(doc(db, 'users', user.uid), (snapshot) => {
+        if (snapshot.exists()) {
+          liveUserDoc = { ...snapshot.data(), uid: user.uid };
+          updateStudentUI();
+        }
+      });
+      activeUnsubscribers.push(unsubUserDoc);
+    } catch (e) {
+      console.warn('Could not bind student user doc listener:', e);
+    }
+  }
+
+  // 2. Live Firestore Listener for Active Trip on Student's route
   try {
     const qTrip = query(
       collection(db, 'trips'),
@@ -691,7 +727,7 @@ function renderStudentView(user) {
         liveTripDoc = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
         liveIndicatorEl.className = 'status-tag status-live';
         liveIndicatorEl.innerText = 'TRIP ACTIVE';
-        activeOtpStatusEl.innerText = 'Driver Started Trip';
+        activeOtpStatusEl.innerText = `OTP: ${liveTripDoc.otp || 'Active'}`;
         activeOtpStatusEl.style.color = 'var(--success)';
       } else {
         liveTripDoc = null;
@@ -707,7 +743,7 @@ function renderStudentView(user) {
     console.warn('Could not bind active trip listener:', e);
   }
 
-  // 2. Submit OTP to board bus
+  // 3. Submit OTP to board bus
   btnSubmitOtp.addEventListener('click', async () => {
     const enteredOtp = otpInput.value.trim();
     otpMsg.style.display = 'block';
@@ -731,22 +767,28 @@ function renderStudentView(user) {
       return;
     }
 
-    // Correct OTP entered! Update Firestore trip doc & boardings collection
+    // Correct OTP entered! Update Firestore trip doc, boardings collection & user doc
     try {
       btnSubmitOtp.disabled = true;
       btnSubmitOtp.innerText = 'Verifying...';
 
-      const studentIdentifier = user.uid || user.name;
+      const sUid = user.uid || null;
+      const sName = user.name;
+      const sId = user.id || null;
 
       if (liveTripDoc.id) {
+        const updateArray = [sName];
+        if (sUid) updateArray.push(sUid);
+        if (sId) updateArray.push(sId);
+
         await updateDoc(doc(db, 'trips', liveTripDoc.id), {
           boardedCount: increment(1),
-          boardedStudents: arrayUnion(studentIdentifier)
+          boardedStudents: arrayUnion(...updateArray)
         });
 
         await addDoc(collection(db, 'boardings'), {
-          studentId: user.uid || 'demo-uid',
-          studentName: user.name,
+          studentId: sUid || sId || 'demo-uid',
+          studentName: sName,
           routeId: assignedRouteName,
           boardingStop: userStop,
           boardedAt: serverTimestamp(),
@@ -754,6 +796,18 @@ function renderStudentView(user) {
           institutionId: instId
         });
       }
+
+      if (sUid) {
+        await updateDoc(doc(db, 'users', sUid), {
+          isBoarded: true,
+          boardedAt: serverTimestamp()
+        });
+      }
+
+      liveUserDoc.isBoarded = true;
+      if (!liveTripDoc.boardedStudents) liveTripDoc.boardedStudents = [];
+      liveTripDoc.boardedStudents.push(user.name);
+      if (sUid) liveTripDoc.boardedStudents.push(sUid);
 
       otpMsg.style.color = 'var(--success)';
       otpMsg.innerText = '✓ Boarding confirmed! Have a safe trip.';
