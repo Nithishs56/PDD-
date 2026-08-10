@@ -12,7 +12,8 @@
     "test:ios": "PLATFORM=ios wdio run appium-tests/config/wdio.conf.js",
     "test:web": "PLATFORM=web wdio run appium-tests/config/wdio.conf.js",
     "test:all": "npm run test:android && npm run test:ios && npm run test:web",
-    "test:report": "node appium-tests/utils/generateExcelReport.js"
+    "test:report": "node appium-tests/utils/generateExcelReport.js",
+    "websitesd": "npm --prefix websitesd run dev"
   },
   "dependencies": {
     "@expo/ngrok": "4.1.3",
