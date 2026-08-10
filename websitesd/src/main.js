@@ -168,7 +168,7 @@ function renderLogin(errorMessage = '') {
   });
 }
 
-// ── 2. DRIVER VIEW (REAL-TIME FIRESTORE & OTP SYNC) ───────────────────────────
+// ── 2. DRIVER VIEW (ACCURATE REAL-TIME STUDENT COUNT & OTP SYNC) ──────────────
 function renderDriverView(user) {
   cleanupSubscriptions();
   const assignedRouteName = user.route || user.assignedRoute || 'Route 1';
@@ -324,7 +324,8 @@ function renderDriverView(user) {
     manifestCountEl.innerText = `${realTimeStudents.length} Students`;
     let boardedNum = 0;
 
-    const boardedList = activeTrip?.boardedStudents || [];
+    const isTripActive = activeTrip && activeTrip.active === true;
+    const boardedList = isTripActive ? (activeTrip.boardedStudents || []) : [];
 
     manifestRowsEl.innerHTML = realTimeStudents.map(student => {
       const sUid = student.uid;
@@ -332,12 +333,14 @@ function renderDriverView(user) {
       const sName = student.name;
       const sEmail = student.email;
 
-      const isBoarded = (sUid && boardedList.includes(sUid)) || 
-                        (sId && boardedList.includes(sId)) || 
-                        (sName && boardedList.includes(sName)) || 
-                        (sEmail && boardedList.includes(sEmail)) || 
-                        student.isBoarded === true || 
-                        student.status === 'boarded';
+      // Check if this student is marked as boarded in the current ACTIVE trip
+      const isBoarded = isTripActive && (
+        (sUid && boardedList.includes(sUid)) || 
+        (sId && boardedList.includes(sId)) || 
+        (sName && boardedList.includes(sName)) || 
+        (sEmail && boardedList.includes(sEmail)) || 
+        student.isBoarded === true
+      );
 
       const isAbsent = student.absentToday === true || student.status === 'absent';
 
@@ -450,16 +453,16 @@ function renderDriverView(user) {
   toggleTripBtn.addEventListener('click', async () => {
     try {
       toggleTripBtn.disabled = true;
-      if (activeTrip) {
-        if (user.uid) {
-          await updateDoc(doc(db, 'trips', activeTrip.id), {
-            active: false,
-            endTime: serverTimestamp()
-          });
-        }
+      if (activeTrip && activeTrip.id) {
+        // End active trip in Firestore
+        await updateDoc(doc(db, 'trips', activeTrip.id), {
+          active: false,
+          endTime: serverTimestamp()
+        });
         activeTrip = null;
         updateManifestTable();
       } else {
+        // Start new active trip
         const newOtp = String(Math.floor(Math.random() * 9000) + 1000);
         if (user.uid) {
           await addDoc(collection(db, 'trips'), {
@@ -498,7 +501,7 @@ function renderDriverView(user) {
   });
 }
 
-// ── 3. STUDENT VIEW (REAL-TIME TWO-WAY SYNC) ──────────────────────────────────
+// ── 3. STUDENT VIEW (STRICT LIVE TRIP LIFECYCLE SYNC) ─────────────────────────
 function renderStudentView(user) {
   cleanupSubscriptions();
   const assignedRouteName = user.route || 'Route 1';
@@ -530,7 +533,7 @@ function renderStudentView(user) {
         <p>Real-time Firestore boarding verification with driver OTP.</p>
       </div>
 
-      <!-- Prominent Boarded Success Banner -->
+      <!-- Active Boarded Success Banner -->
       <div id="student-boarded-banner" style="display: none; background: rgba(52, 211, 153, 0.15); border-left: 4px solid var(--success); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.25rem;">
         <div style="display: flex; align-items: center; gap: 0.75rem;">
           <span style="font-size: 1.5rem;">✅</span>
@@ -543,12 +546,25 @@ function renderStudentView(user) {
         </div>
       </div>
 
+      <!-- Trip Ended / Completed Banner -->
+      <div id="student-trip-ended-banner" style="display: none; background: rgba(124, 143, 247, 0.12); border-left: 4px solid var(--accent); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.25rem;">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <span style="font-size: 1.5rem;">🏁</span>
+          <div>
+            <div style="font-weight: 700; color: var(--accent); font-size: 1rem;">Trip Completed</div>
+            <div style="font-size: 0.85rem; color: var(--text-main); margin-top: 0.2rem;">
+              The driver has ended the trip for <strong>${assignedRouteName}</strong>. Bus is currently on standby.
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="grid-layout">
         <!-- Student Profile & OTP Boarding Card -->
         <div class="card">
           <div class="card-header">
             <span class="card-title">🎓 Student Profile</span>
-            <span id="student-status-badge" class="badge badge-pending">PENDING BOARDING</span>
+            <span id="student-status-badge" class="badge badge-pending">BUS STANDBY</span>
           </div>
           <div class="info-list">
             <div class="info-item">
@@ -570,7 +586,7 @@ function renderStudentView(user) {
           </div>
 
           <!-- Board Bus with OTP Form -->
-          <div id="student-otp-section" style="margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+          <div id="student-otp-section" style="display: none; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
             <div style="font-size: 0.85rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--accent);">
               🔑 Enter Driver OTP to Board Bus
             </div>
@@ -603,7 +619,7 @@ function renderStudentView(user) {
             </div>
             <div class="info-item">
               <span class="info-label">Active OTP Status</span>
-              <span id="student-active-otp-status" class="info-value" style="color: var(--accent); font-weight: 700;">Checking trip...</span>
+              <span id="student-active-otp-status" class="info-value" style="color: var(--accent); font-weight: 700;">No Active Trip</span>
             </div>
             <div class="info-item">
               <span class="info-label">Bus Number</span>
@@ -654,35 +670,63 @@ function renderStudentView(user) {
   const activeOtpStatusEl = document.getElementById('student-active-otp-status');
   const otpSectionEl = document.getElementById('student-otp-section');
   const boardedBannerEl = document.getElementById('student-boarded-banner');
+  const tripEndedBannerEl = document.getElementById('student-trip-ended-banner');
   const otpInput = document.getElementById('otp-input');
   const btnSubmitOtp = document.getElementById('btn-submit-otp');
   const otpMsg = document.getElementById('otp-msg');
 
   function updateStudentUI() {
-    const boardedList = liveTripDoc?.boardedStudents || [];
-    const isBoardedInTrip = (user.uid && boardedList.includes(user.uid)) ||
-                            (user.id && boardedList.includes(user.id)) ||
-                            (user.name && boardedList.includes(user.name)) ||
-                            (user.email && boardedList.includes(user.email)) ||
-                            liveUserDoc.isBoarded === true;
+    const isTripActive = liveTripDoc && liveTripDoc.active === true;
+    const boardedList = isTripActive ? (liveTripDoc.boardedStudents || []) : [];
+
+    const isBoardedInActiveTrip = isTripActive && (
+      (user.uid && boardedList.includes(user.uid)) ||
+      (user.id && boardedList.includes(user.id)) ||
+      (user.name && boardedList.includes(user.name)) ||
+      (user.email && boardedList.includes(user.email))
+    );
 
     const isAbsent = liveUserDoc.absentToday === true;
 
-    if (isBoardedInTrip) {
-      statusBadgeEl.className = 'badge badge-boarded';
-      statusBadgeEl.innerText = '✓ BOARDED BUS';
-      if (boardedBannerEl) boardedBannerEl.style.display = 'block';
-      if (otpSectionEl) otpSectionEl.style.display = 'none';
-    } else if (isAbsent) {
-      statusBadgeEl.className = 'badge badge-absent';
-      statusBadgeEl.innerText = 'MARKED ABSENT';
-      if (boardedBannerEl) boardedBannerEl.style.display = 'none';
-      if (otpSectionEl) otpSectionEl.style.display = 'none';
+    // Handle banners & statuses based on strict trip lifecycle
+    if (isTripActive) {
+      if (tripEndedBannerEl) tripEndedBannerEl.style.display = 'none';
+
+      if (isBoardedInActiveTrip) {
+        statusBadgeEl.className = 'badge badge-boarded';
+        statusBadgeEl.innerText = '✓ BOARDED BUS';
+        if (boardedBannerEl) boardedBannerEl.style.display = 'block';
+        if (otpSectionEl) otpSectionEl.style.display = 'none';
+      } else if (isAbsent) {
+        statusBadgeEl.className = 'badge badge-absent';
+        statusBadgeEl.innerText = 'MARKED ABSENT';
+        if (boardedBannerEl) boardedBannerEl.style.display = 'none';
+        if (otpSectionEl) otpSectionEl.style.display = 'none';
+      } else {
+        statusBadgeEl.className = 'badge badge-pending';
+        statusBadgeEl.innerText = 'PENDING BOARDING';
+        if (boardedBannerEl) boardedBannerEl.style.display = 'none';
+        if (otpSectionEl) otpSectionEl.style.display = 'block';
+      }
     } else {
-      statusBadgeEl.className = 'badge badge-pending';
-      statusBadgeEl.innerText = 'PENDING BOARDING';
+      // TRIP ENDED / STANDBY (Driver clicked End Trip or no active trip)
       if (boardedBannerEl) boardedBannerEl.style.display = 'none';
-      if (otpSectionEl) otpSectionEl.style.display = 'block';
+      if (otpSectionEl) otpSectionEl.style.display = 'none';
+
+      if (liveTripDoc === null && liveUserDoc.isBoarded) {
+        // Driver ended an active trip where student boarded
+        if (tripEndedBannerEl) tripEndedBannerEl.style.display = 'block';
+        statusBadgeEl.className = 'badge badge-boarded';
+        statusBadgeEl.innerText = 'TRIP COMPLETED';
+      } else if (isAbsent) {
+        if (tripEndedBannerEl) tripEndedBannerEl.style.display = 'none';
+        statusBadgeEl.className = 'badge badge-absent';
+        statusBadgeEl.innerText = 'MARKED ABSENT';
+      } else {
+        if (tripEndedBannerEl) tripEndedBannerEl.style.display = 'none';
+        statusBadgeEl.className = 'badge badge-pending';
+        statusBadgeEl.innerText = 'BUS STANDBY';
+      }
     }
 
     if (isAbsent) {
@@ -754,7 +798,7 @@ function renderStudentView(user) {
       return;
     }
 
-    if (!liveTripDoc) {
+    if (!liveTripDoc || !liveTripDoc.active) {
       otpMsg.style.color = 'var(--danger)';
       otpMsg.innerText = 'No active trip found for your route. Please wait for driver to start trip.';
       return;
@@ -767,28 +811,22 @@ function renderStudentView(user) {
       return;
     }
 
-    // Correct OTP entered! Update Firestore trip doc, boardings collection & user doc
+    // Correct OTP entered! Store SINGLE unique student identifier in boardedStudents
     try {
       btnSubmitOtp.disabled = true;
       btnSubmitOtp.innerText = 'Verifying...';
 
-      const sUid = user.uid || null;
-      const sName = user.name;
-      const sId = user.id || null;
+      const studentKey = user.uid || user.id || user.name;
 
       if (liveTripDoc.id) {
-        const updateArray = [sName];
-        if (sUid) updateArray.push(sUid);
-        if (sId) updateArray.push(sId);
-
         await updateDoc(doc(db, 'trips', liveTripDoc.id), {
           boardedCount: increment(1),
-          boardedStudents: arrayUnion(...updateArray)
+          boardedStudents: arrayUnion(studentKey)
         });
 
         await addDoc(collection(db, 'boardings'), {
-          studentId: sUid || sId || 'demo-uid',
-          studentName: sName,
+          studentId: user.uid || user.id || 'demo-uid',
+          studentName: user.name,
           routeId: assignedRouteName,
           boardingStop: userStop,
           boardedAt: serverTimestamp(),
@@ -797,8 +835,8 @@ function renderStudentView(user) {
         });
       }
 
-      if (sUid) {
-        await updateDoc(doc(db, 'users', sUid), {
+      if (user.uid) {
+        await updateDoc(doc(db, 'users', user.uid), {
           isBoarded: true,
           boardedAt: serverTimestamp()
         });
@@ -806,8 +844,9 @@ function renderStudentView(user) {
 
       liveUserDoc.isBoarded = true;
       if (!liveTripDoc.boardedStudents) liveTripDoc.boardedStudents = [];
-      liveTripDoc.boardedStudents.push(user.name);
-      if (sUid) liveTripDoc.boardedStudents.push(sUid);
+      if (!liveTripDoc.boardedStudents.includes(studentKey)) {
+        liveTripDoc.boardedStudents.push(studentKey);
+      }
 
       otpMsg.style.color = 'var(--success)';
       otpMsg.innerText = '✓ Boarding confirmed! Have a safe trip.';

@@ -82,14 +82,14 @@ export const routes = [
 
 export const routeStudents = {
   'Route 1': [
-    { id: 1, name: 'Ravi Kumar', stop: 'Tambaram', roll: 'CIT-2023-CS08', status: 'boarded' },
-    { id: 2, name: 'Ananya R', stop: 'Chromepet', roll: 'CIT-2023-IT03', status: 'boarded' },
-    { id: 3, name: 'Dinesh K', stop: 'Guindy', roll: 'CIT-2023-ME12', status: 'not_yet' },
-    { id: 4, name: 'Priya M', stop: 'Tambaram', roll: 'CIT-2022-CS01', status: 'boarded' },
+    { id: 1, name: 'Ravi Kumar', stop: 'Tambaram', roll: 'CIT-2023-CS08', status: 'pending' },
+    { id: 2, name: 'Ananya R', stop: 'Chromepet', roll: 'CIT-2023-IT03', status: 'pending' },
+    { id: 3, name: 'Dinesh K', stop: 'Guindy', roll: 'CIT-2023-ME12', status: 'pending' },
+    { id: 4, name: 'Priya M', stop: 'Tambaram', roll: 'CIT-2022-CS01', status: 'pending' },
     { id: 5, name: 'Karthik V', stop: 'Chromepet', roll: 'CIT-2022-EC07', status: 'absent' },
   ],
   'Route 2': [
-    { id: 1, name: 'Kiran S', stop: 'Velachery', roll: 'CIT-2023-EC14', status: 'boarded' },
-    { id: 2, name: 'Suresh B', stop: 'Madipakkam', roll: 'CIT-2022-CS09', status: 'not_yet' },
+    { id: 1, name: 'Kiran S', stop: 'Velachery', roll: 'CIT-2023-EC14', status: 'pending' },
+    { id: 2, name: 'Suresh B', stop: 'Madipakkam', roll: 'CIT-2022-CS09', status: 'pending' },
   ],
 };
